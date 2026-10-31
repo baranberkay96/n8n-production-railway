@@ -1,6 +1,6 @@
 # Deploy and Host n8n with Railway
 
-[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/n8n-2-production-stack-queue-mode-workers-python?referralCode=20H68q)
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/n8n-2-production-stack-queue-mode-worker?referralCode=20H68q)
 
 n8n is a fair-code workflow automation platform with a visual editor, 400+ integrations and AI agent nodes. This community template runs n8n 2.45.7 in queue mode with a webhook processor, scalable workers that run JavaScript and Python Code nodes, Postgres, Redis and daily backups, ready to log in right after deploy.
 
