@@ -46,7 +46,8 @@ COPY --from=runners /export/opt/runners /opt/runners
 COPY --from=runners /export/etc/n8n-task-runners.json /etc/n8n-task-runners.json
 COPY --from=runners /export/licenses/ /usr/share/licenses/n8n-task-runner-launcher/
 COPY --from=runners /export/pylibs/ /tmp/pylibs/
-COPY --chmod=644 worker-supervisor.cjs /usr/local/lib/railway/worker-supervisor.cjs
+# 755, not 644: BuildKit gives the directory it creates the same mode (unreadable for non-root users).
+COPY --chmod=755 worker-supervisor.cjs /usr/local/lib/railway/worker-supervisor.cjs
 
 # - Add only the shared libraries the Python build needs and the n8n image lacks
 #   (libffi, libsqlite3, libuuid, readline ...); existing n8n libraries stay untouched.
