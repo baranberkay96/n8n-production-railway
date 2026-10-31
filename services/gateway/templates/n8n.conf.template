@@ -1,0 +1,62 @@
+# Rendered at container start; only PORT, N8N_GW_* and NGINX_* are substituted.
+
+map $http_x_forwarded_proto $n8n_forwarded_proto {
+    default $http_x_forwarded_proto;
+    ''      $scheme;
+}
+
+map $http_upgrade $n8n_connection_upgrade {
+    default upgrade;
+    ''      '';
+}
+
+server {
+    listen ${PORT};
+    listen [::]:${PORT};
+    server_name _;
+    server_tokens off;
+
+    # Railway private DNS, resolved per request (upstreams may start later or move).
+    resolver ${NGINX_LOCAL_RESOLVERS} valid=10s;
+    resolver_timeout 5s;
+
+    client_max_body_size ${NGINX_CLIENT_MAX_BODY_SIZE};
+    proxy_read_timeout ${NGINX_PROXY_TIMEOUT};
+    proxy_send_timeout ${NGINX_PROXY_TIMEOUT};
+
+    location = /gateway-healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # Prometheus metrics stay on the private network: scrape n8n Main, n8n Webhook and
+    # n8n Worker directly on port 5678 (see README).
+    location = /metrics {
+        return 404;
+    }
+    location ^~ /metrics/ {
+        return 404;
+    }
+
+    # The owner account is created from Railway variables before n8n Main starts serving,
+    # so nobody can claim the instance over the web (defense in depth).
+    location = /rest/owner/setup {
+        default_type application/json;
+        return 403 '{"message":"Owner setup is disabled: the owner account is managed by Railway variables on n8n Main."}\n';
+    }
+
+    # Production endpoints -> webhook processor (main has N8N_DISABLE_PRODUCTION_MAIN_PROCESS=true)
+    location ~ ^/(webhook|webhook-waiting|form|form-waiting|mcp)/ {
+        set $n8n_webhook ${N8N_GW_WEBHOOK_UPSTREAM};
+        proxy_pass http://$n8n_webhook;
+        include /etc/nginx/snippets/n8n_proxy.conf;
+    }
+
+    # Editor, REST API, push (websocket), test webhooks/forms/MCP, OAuth callbacks -> main
+    location / {
+        set $n8n_main ${N8N_GW_MAIN_UPSTREAM};
+        proxy_pass http://$n8n_main;
+        include /etc/nginx/snippets/n8n_proxy.conf;
+    }
+}
